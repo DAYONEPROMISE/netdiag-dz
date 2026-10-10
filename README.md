@@ -12,6 +12,7 @@ Wi-Fi signal details (SSID/RSSI/link speed/frequency/IP), intervention report hi
 | ACCESS_NETWORK_STATE | Distinguish "no network" from "host down" |
 | ACCESS_WIFI_STATE | Read WifiManager connection info |
 | ACCESS_FINE_LOCATION | Android 10+ requires location grant to expose SSID/BSSID; no location stored |
+| ACCESS_COARSE_LOCATION | Android 12+ requires COARSE alongside FINE; app works with coarse-only grant |
 
 No contacts/camera/mic/storage. LAN scan stays on the local /24, sequential, 250ms timeout.
 
