@@ -4,17 +4,23 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.room.Room
@@ -28,33 +34,56 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         db = Room.databaseBuilder(applicationContext, AppDb::class.java, "netdiagdz.db").build()
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             locPerm.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
         setContent {
-            MaterialTheme(colorScheme = lightColorScheme()) {
+            NetDiagDZTheme {
                 App(db)
             }
         }
     }
 }
 
+/** 2026 baseline: dynamic color (Android 12+), system dark mode, edge-to-edge aware. */
+@Composable
+fun NetDiagDZTheme(content: @Composable () -> Unit) {
+    val ctx = LocalContext.current
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
+    // Dynamic color needs Android 12+ (API 31); older devices get static M3 schemes.
+    val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
+    } else {
+        if (dark) darkColorScheme() else lightColorScheme()
+    }
+    MaterialTheme(colorScheme = scheme, content = content)
+}
+
+private data class Dest(val id: String, val fr: String, val ar: String)
+
+private val DESTS = listOf(
+    Dest("ping", "Ping", "بينغ"),
+    Dest("dns", "DNS", "DNS"),
+    Dest("ports", "Ports", "المنافذ"),
+    Dest("lan", "LAN", "الشبكة"),
+    Dest("wifi", "Wi-Fi", "واي فاي"),
+    Dest("history", "Rapports", "التقارير"),
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App(db: AppDb) {
     var tab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Ping", "DNS", "Ports", "LAN", "Wi-Fi", "Rapports")
     val scope = rememberCoroutineScope()
     fun save(kind: String, target: String, summary: String) {
         scope.launch(Dispatchers.IO) { db.reports().insert(Report(kind = kind, target = target, summary = summary)) }
     }
-    Scaffold(topBar = { TopAppBar(title = { Text("NetDiagDZ") }) }) { pad ->
-        Column(Modifier.padding(pad).padding(12.dp)) {
-            ScrollableTabRow(selectedTabIndex = tab) {
-                tabs.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) }) }
-            }
-            Spacer(Modifier.height(8.dp))
+    // Adaptive: rail on wide screens (tablets/foldables), bottom bar on phones.
+    BoxWithConstraints {
+        val wide = maxWidth >= 600.dp
+        val content: @Composable () -> Unit = {
             when (tab) {
                 0 -> PingScreen(::save)
                 1 -> DnsScreen(::save)
@@ -64,6 +93,56 @@ fun App(db: AppDb) {
                 5 -> HistoryScreen(db)
             }
         }
+        if (wide) {
+            Row(Modifier.fillMaxSize()) {
+                NavigationRail {
+                    DESTS.forEachIndexed { i, d ->
+                        NavigationRailItem(
+                            selected = tab == i,
+                            onClick = { tab = i },
+                            icon = { Text("•") },
+                            label = { Text(d.fr) },
+                        )
+                    }
+                }
+                RailContent(content)
+            }
+        } else {
+            Scaffold(
+                topBar = { TopAppBar(title = { Text("NetDiagDZ", Modifier.semantics { heading() }) }) },
+                bottomBar = {
+                    NavigationBar {
+                        DESTS.forEachIndexed { i, d ->
+                            NavigationBarItem(
+                                selected = tab == i,
+                                onClick = { tab = i },
+                                icon = { Text("•") },
+                                label = { Text(d.fr) },
+                            )
+                        }
+                    }
+                }
+            ) { pad ->
+                Column(
+                    Modifier.padding(pad)
+                        .consumeWindowInsets(pad)
+                        .padding(12.dp)
+                ) { content() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.RailContent(content: @Composable () -> Unit) {
+    Column(
+        Modifier.weight(1f)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(12.dp)
+    ) {
+        Text("NetDiagDZ", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+        Spacer(Modifier.height(8.dp))
+        content()
     }
 }
 
