@@ -30,11 +30,32 @@ jobs:
         run: ./gradlew :app:lintDebug --stacktrace
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --stacktrace
-      - name: Upload APK
+      - name: Build release APK (unsigned)
+        run: ./gradlew :app:assembleRelease --stacktrace
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: app/build/outputs/apk/release/*.apk
+      - name: Read app version
+        run: |
+          VER=$(grep -hoP 'versionName\s*=?\s*[\x27\x22]\K[0-9.]+' app/build.gradle app/build.gradle.kts 2>/dev/null | head -1)
+          CODE=$(grep -hoP 'versionCode\s*=?\s*\K[0-9]+' app/build.gradle app/build.gradle.kts 2>/dev/null | head -1)
+          echo "APP_VERSION=${VER:-0.0.0}" >> "$GITHUB_ENV"
+          echo "APP_CODE=${CODE:-0}" >> "$GITHUB_ENV"
+      - name: Publish release APK to GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: release-v${{ env.APP_VERSION }}-b${{ github.run_number }}
+          allowUpdates: false
+          name: NetDiagDZ release APK v${{ env.APP_VERSION }} (build ${{ github.run_number }})
+          body: Release (unsigned, test only) build of NetDiagDZ v${{ env.APP_VERSION }}+${{ env.APP_CODE }} from commit ${{ github.sha }}. OpenPencil pass: real nav icons with labels replace bullet glyphs. Debug APKs publish under debug-latest and v1.0 tags as before.
+          artifacts: "app/build/outputs/apk/release/*.apk"
       - name: Publish release
         uses: ncipollo/release-action@v1
         with:
