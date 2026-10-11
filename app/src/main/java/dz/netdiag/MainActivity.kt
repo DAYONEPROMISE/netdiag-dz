@@ -13,11 +13,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -61,15 +69,15 @@ fun NetDiagDZTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = scheme, content = content)
 }
 
-private data class Dest(val id: String, val fr: String, val ar: String)
+private data class Dest(val id: String, val fr: String, val ar: String, val icon: ImageVector)
 
 private val DESTS = listOf(
-    Dest("ping", "Ping", "بينغ"),
-    Dest("dns", "DNS", "DNS"),
-    Dest("ports", "Ports", "المنافذ"),
-    Dest("lan", "LAN", "الشبكة"),
-    Dest("wifi", "Wi-Fi", "واي فاي"),
-    Dest("history", "Rapports", "التقارير"),
+    Dest("ping", "Ping", "\u0628\u064a\u0646\u063a", Icons.Filled.Bolt),
+    Dest("dns", "DNS", "DNS", Icons.Filled.Language),
+    Dest("ports", "Ports", "\u0627\u0644\u0645\u0646\u0627\u0641\u0630", Icons.Filled.Tune),
+    Dest("lan", "LAN", "\u0627\u0644\u0634\u0628\u0643\u0629", Icons.Filled.Devices),
+    Dest("wifi", "Wi-Fi", "\u0648\u0627\u064a \u0641\u0627\u064a", Icons.Filled.Wifi),
+    Dest("history", "Rapports", "\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631", Icons.Filled.History),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,7 +108,7 @@ fun App(db: AppDb) {
                         NavigationRailItem(
                             selected = tab == i,
                             onClick = { tab = i },
-                            icon = { Text("•") },
+                            icon = { Icon(d.icon, contentDescription = d.fr) },
                             label = { Text(d.fr) },
                         )
                     }
@@ -116,7 +124,7 @@ fun App(db: AppDb) {
                             NavigationBarItem(
                                 selected = tab == i,
                                 onClick = { tab = i },
-                                icon = { Text("•") },
+                                icon = { Icon(d.icon, contentDescription = d.fr) },
                                 label = { Text(d.fr) },
                             )
                         }
@@ -158,9 +166,9 @@ fun PingScreen(save: (String, String, String) -> Unit) {
     var out by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Field("Hôte / Host / المضيف", host) { host = it }
+    Field("H\u00f4te / Host / \u0627\u0644\u0645\u0636\u064a\u0641", host) { host = it }
     Button(onClick = {
-        if (!NetTools.isValidHost(host)) { out = "Hôte invalide / Invalid host"; return@Button }
+        if (!NetTools.isValidHost(host)) { out = "H\u00f4te invalide / Invalid host"; return@Button }
         busy = true; out = "..."
         scope.launch {
             val res = withContext(Dispatchers.IO) {
@@ -187,11 +195,11 @@ fun DnsScreen(save: (String, String, String) -> Unit) {
         busy = true; out = "..."
         scope.launch {
             val ips = withContext(Dispatchers.IO) { dnsLookup(host) }
-            out = if (ips.isEmpty()) "$host : échec DNS / DNS failed" else "$host ->\n" + ips.joinToString("\n")
+            out = if (ips.isEmpty()) "$host : \u00e9chec DNS / DNS failed" else "$host ->\n" + ips.joinToString("\n")
             save("dns", host, out.take(500))
             busy = false
         }
-    }, enabled = !busy) { Text("Résoudre / Lookup") }
+    }, enabled = !busy) { Text("R\u00e9soudre / Lookup") }
     Text(out, modifier = Modifier.padding(top = 8.dp))
 }
 
@@ -202,15 +210,15 @@ fun PortScreen(save: (String, String, String) -> Unit) {
     var out by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Field("Hôte", host) { host = it }
+    Field("H\u00f4te", host) { host = it }
     Field("Ports (ex: 80,443,8000-8002)", ports) { ports = it }
     Button(onClick = {
         val list = NetTools.parsePorts(ports)
-        if (!NetTools.isValidHost(host) || list.isEmpty()) { out = "Hôte ou ports invalides"; return@Button }
+        if (!NetTools.isValidHost(host) || list.isEmpty()) { out = "H\u00f4te ou ports invalides"; return@Button }
         busy = true; out = "..."
         scope.launch {
             val res = withContext(Dispatchers.IO) { list.map { checkPort(host, it) } }
-            out = res.joinToString("\n") { "${it.host}:${it.port} " + (if (it.open) "OUVERT (${it.timeMs}ms)" else "fermé") }
+            out = res.joinToString("\n") { "${it.host}:${it.port} " + (if (it.open) "OUVERT (${it.timeMs}ms)" else "ferm\u00e9") }
             save("port", "$host [$ports]", out.take(500))
             busy = false
         }
@@ -225,7 +233,7 @@ fun LanScreen(save: (String, String, String) -> Unit) {
     var out by remember { mutableStateOf<List<String>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Field("IP de référence (préfixe /24 auto)", base) { base = it }
+    Field("IP de r\u00e9f\u00e9rence (pr\u00e9fixe /24 auto)", base) { base = it }
     Button(onClick = {
         val prefix = NetTools.prefixOf(base.ifBlank { "192.168.1.1" })
         if (prefix.isEmpty()) return@Button
@@ -253,7 +261,7 @@ fun LanScreen(save: (String, String, String) -> Unit) {
 @Composable
 fun WifiScreen(save: (String, String, String) -> Unit) {
     val ctx = LocalContext.current
-    var info by remember { mutableStateOf("—") }
+    var info by remember { mutableStateOf("\u2014") }
     Button(onClick = {
         info = readWifi(ctx)
         save("wifi", "wlan", info.take(500))
@@ -265,7 +273,7 @@ fun readWifi(ctx: Context): String {
     return try {
         val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val c = wm.connectionInfo
-        "SSID: ${c.ssid}\nBSSID: ${c.bssid}\nRSSI: ${c.rssi} dBm\nDébit/Link: ${c.linkSpeed} Mbps\nFréquence: ${c.frequency} MHz\nIP: ${c.ipAddress.let { "${it and 0xFF}.${it shr 8 and 0xFF}.${it shr 16 and 0xFF}.${it shr 24 and 0xFF}" }}"
+        "SSID: ${c.ssid}\nBSSID: ${c.bssid}\nRSSI: ${c.rssi} dBm\nD\u00e9bit/Link: ${c.linkSpeed} Mbps\nFr\u00e9quence: ${c.frequency} MHz\nIP: ${c.ipAddress.let { "${it and 0xFF}.${it shr 8 and 0xFF}.${it shr 16 and 0xFF}.${it shr 24 and 0xFF}" }}"
     } catch (e: Exception) {
         "Wi-Fi indisponible: ${e.message}"
     }
