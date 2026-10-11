@@ -48,13 +48,23 @@ jobs:
           CODE=$(grep -hoP 'versionCode\s*=?\s*\K[0-9]+' app/build.gradle app/build.gradle.kts 2>/dev/null | head -1)
           echo "APP_VERSION=${VER:-0.0.0}" >> "$GITHUB_ENV"
           echo "APP_CODE=${CODE:-0}" >> "$GITHUB_ENV"
+      - name: Write release notes
+        run: |
+          {
+            echo "# NetDiagDZ release v${APP_VERSION} (build ${GITHUB_RUN_NUMBER})"; echo ""
+            echo "- Version: ${APP_VERSION}+${APP_CODE}"; echo "- Commit: ${GITHUB_SHA}"
+            echo "- Release (unsigned, test only). Debug APKs publish under debug-latest and v1.0 tags as before."
+            echo "- OpenPencil pass: real nav icons with labels replace bullet glyphs."; echo ""
+            echo "## Files"; find app/build/outputs/apk/release -name '*.apk' -printf '- %f (%s bytes)\n'
+          } > release-notes.md
+          cat release-notes.md
       - name: Publish release APK to GitHub Release
         uses: ncipollo/release-action@v1
         with:
           tag: release-v${{ env.APP_VERSION }}-b${{ github.run_number }}
           allowUpdates: false
           name: NetDiagDZ release APK v${{ env.APP_VERSION }} (build ${{ github.run_number }})
-          body: Release (unsigned, test only) build of NetDiagDZ v${{ env.APP_VERSION }}+${{ env.APP_CODE }} from commit ${{ github.sha }}. OpenPencil pass: real nav icons with labels replace bullet glyphs. Debug APKs publish under debug-latest and v1.0 tags as before.
+          bodyFile: release-notes.md
           artifacts: "app/build/outputs/apk/release/*.apk"
       - name: Publish release
         uses: ncipollo/release-action@v1
