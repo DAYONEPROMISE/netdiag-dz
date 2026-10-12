@@ -25,9 +25,21 @@ jobs:
           yes | "$SDKMGR" --licenses > /dev/null || true
           "$SDKMGR" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:testDebugUnitTest --stacktrace 2>&1 | tee build-test.log
+      - name: Surface test errors
+        if: failure()
+        run: |
+          grep -a -B2 -A15 -E "What went wrong|Caused by|FAILED|Exception|error:" build-test.log | head -40 | cut -c1-500 | while IFS= read -r l; do echo "::error::$l"; done; true
       - name: Lint
-        run: ./gradlew :app:lintDebug --stacktrace
+        run: |
+          set -o pipefail
+          ./gradlew :app:lintDebug --stacktrace 2>&1 | tee build-lint.log
+      - name: Surface lint errors
+        if: failure()
+        run: |
+          grep -a -B2 -A15 -E "What went wrong|Caused by|FAILED|Exception|Error" build-lint.log | head -40 | cut -c1-500 | while IFS= read -r l; do echo "::error::$l"; done; true
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --stacktrace
       - name: Build release APK (unsigned)
