@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NetDiagDZ</string>
+    <string name="empty_reports">No reports yet — run a ping, DNS lookup or scan.</string>
 </resources>

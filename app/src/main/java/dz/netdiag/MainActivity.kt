@@ -27,8 +27,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.room.Room
@@ -160,6 +162,17 @@ fun Field(label: String, value: String, onChange: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), singleLine = true)
 }
 
+/** Terminal-style result readout: monospace card, per the ops-console design. */
+@Composable
+fun TermOut(text: String) {
+    Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            text, Modifier.padding(12.dp),
+            fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
 @Composable
 fun PingScreen(save: (String, String, String) -> Unit) {
     var host by remember { mutableStateOf("8.8.8.8") }
@@ -180,7 +193,7 @@ fun PingScreen(save: (String, String, String) -> Unit) {
             busy = false
         }
     }, enabled = !busy) { Text("Ping (4x)") }
-    Text(out, modifier = Modifier.padding(top = 8.dp))
+    TermOut(out)
 }
 
 @Composable
@@ -200,7 +213,7 @@ fun DnsScreen(save: (String, String, String) -> Unit) {
             busy = false
         }
     }, enabled = !busy) { Text("R\u00e9soudre / Lookup") }
-    Text(out, modifier = Modifier.padding(top = 8.dp))
+    TermOut(out)
 }
 
 @Composable
@@ -223,7 +236,7 @@ fun PortScreen(save: (String, String, String) -> Unit) {
             busy = false
         }
     }, enabled = !busy) { Text("Tester / Check") }
-    Text(out, modifier = Modifier.padding(top = 8.dp))
+    TermOut(out)
 }
 
 @Composable
@@ -266,7 +279,7 @@ fun WifiScreen(save: (String, String, String) -> Unit) {
         info = readWifi(ctx)
         save("wifi", "wlan", info.take(500))
     }) { Text("Lire signal Wi-Fi / Read Wi-Fi") }
-    Text(info, modifier = Modifier.padding(top = 8.dp))
+    TermOut(info)
 }
 
 fun readWifi(ctx: Context): String {
@@ -288,6 +301,14 @@ fun HistoryScreen(db: AppDb) {
         Button(onClick = { scope.launch { items = withContext(Dispatchers.IO) { db.reports().list() } } }) { Text("Actualiser") }
         Spacer(Modifier.width(8.dp))
         Button(onClick = { scope.launch { withContext(Dispatchers.IO) { db.reports().clear() }; items = emptyList() } }) { Text("Effacer") }
+    }
+    if (items.isEmpty()) {
+        Text(
+            stringResource(R.string.empty_reports),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
     }
     LazyColumn {
         items(items) {
